@@ -93,7 +93,7 @@ public class TerrainGenerator : MonoBehaviour
     private Tile generateTile(int xpos, int zpos)
     {
         /*trying stuff: maybe delete me*/
-        float[,] seeds = new float[(int)(nRowTiles), (int)(nRowTiles)];
+        /*float[,] seeds = new float[(int)(nRowTiles), (int)(nRowTiles)];
         for (int xx = 0; xx < nRowTiles; xx++)
             for (int zz = 0; zz < nRowTiles; zz++)
                // if (xx == 0 || zz == 0 || xx == nRowTiles - 1 || zz == nRowTiles - 1)
@@ -101,7 +101,7 @@ public class TerrainGenerator : MonoBehaviour
                  if (xx % (nRowTiles / 2) == 0 || zz % ((nRowTiles) / 2) == 0)
                     seeds[xx, zz] = UnityEngine.Random.Range(-10, 10);
         DiamondSquare.generateHeightMap(seeds, (int)(nRowTiles), (int)(nRowTiles), (int)(nRowTiles / 2), 1f);
-
+		*/
         //create new tile object from designated prefab. Make parent this class and change the local scale of the transform to match that of the mesh
         GameObject tile = (GameObject) Instantiate(terrainTilePrefab, new Vector3(xpos * tileSize, 0, zpos * tileSize), Quaternion.identity);
         tile.transform.localScale = new Vector3(tileSize * 0.1f, 1, tileSize * 0.1f);
@@ -118,8 +118,8 @@ public class TerrainGenerator : MonoBehaviour
             Vector3 vertexPosition = tile.transform.position + vertices[v] * tileSize / sideLengthMesh;
 
             //may need to fix this, see above, trying things out
-            float height = DiamondSquare.noise((int) (vertexPosition.x * detailScale),(int) (vertexPosition.z * detailScale));         
-            //float height = PerlinNoise.noise(vertexPosition.x * detailScale , vertexPosition.z * detailScale);
+            //float height = DiamondSquare.noise((int) (vertexPosition.x * detailScale),(int) (vertexPosition.z * detailScale));         
+            float height = PerlinNoise.noise(vertexPosition.x * detailScale , vertexPosition.z * detailScale);
 
             //scale the height accordingly
             vertices[v].y = height * heightScale;
