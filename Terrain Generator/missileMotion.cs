@@ -5,6 +5,7 @@ public class missileMotion : MonoBehaviour {
 	//public GameObject launchpoint;
 	public float moveSpeed;
 	public float range;
+	//private ParticleSystem exp;
 	private Rigidbody rigid;
 	private float distanceTraveled;
 
@@ -12,6 +13,7 @@ public class missileMotion : MonoBehaviour {
 	void Start () {
 		distanceTraveled = 0;
 		rigid = GetComponent<Rigidbody> ();
+		//exp = (ParticleSystem)gameObject.AddComponent <ParticleSystem>();
 	}
 	
 	// Update is called once per frame
@@ -22,10 +24,10 @@ public class missileMotion : MonoBehaviour {
 		Vector3 forward = transform.rotation * Vector3.forward;
 		rigid.velocity = forward * (Time.deltaTime * moveSpeed);
 		distanceTraveled += moveSpeed * Time.deltaTime;
-		Debug.Log (distanceTraveled);
+		//Debug.Log (distanceTraveled);
 	}
 
-	void OnCollisionEnter(Collision hit) 
+	/*void OnCollisionEnter(Collision hit) 
 	{
 		print ("Collision occurs");
 		if (hit.gameObject.CompareTag("Plane"))
@@ -33,5 +35,19 @@ public class missileMotion : MonoBehaviour {
 			hit.gameObject.SetActive(false);
 		}
 
-	}
+	}*/
+
+	/*void OnTriggerEnter(Collider other) 
+	{
+		//print ("Collision occurs");
+		if (other.gameObject.CompareTag("Plane"))
+		{
+			//Explode ();
+			//var exp = GetComponent<ParticleSystem> ();
+			exp.Play ();
+			//exp.playOnAwake = false;
+			Destroy(other.gameObject, exp.duration);
+		}
+
+	}*/
 }

@@ -14,16 +14,18 @@ public class planeController : MonoBehaviour {
 	bool decelerating = false;
 
 	public float moveSpeed = 500f;
-	float turnSpeed = 75f;
+	//float turnSpeed = 75f;
 
 	readonly float maxSpeed = 100000f;
 	readonly float minSpeed = 100f;
 
 	public Rigidbody Missile;
 	public GameObject launchPoint;
+	//public flightPhysics flightPhys;
 
 	private Vector3 missileOffset;
 	private Vector3 missilePos;
+	private ParticleSystem exp;
 
 	// Use this for initialization
 	void Start()
@@ -38,6 +40,7 @@ public class planeController : MonoBehaviour {
 		missileOffset = missilePos - transform.position;*/
 
 		rigid = GetComponent<Rigidbody>();
+		//flightPhys = new flightPhysics ();
 	}
 
 	// Update is called once per frame
@@ -124,23 +127,29 @@ public class planeController : MonoBehaviour {
 		float rotationy = transform.eulerAngles.y;
 		float rotationz = transform.eulerAngles.z;
 
-		float softTilt = getSoftTilt(transform.eulerAngles.z);
+		//float softTilt = getSoftTilt(transform.eulerAngles.z);
 		//var dir = new Vector3 (Mathf.Cos (rotationy) * Mathf.Cos (rotationx), Mathf.Sin (rotationy) * Mathf.Cos (rotationx), Mathf.Sin (rotationx));
 		//print (transform.forward);
 
 		//roll = Input.GetAxis("Horizontal") * (Time.deltaTime * turnSpeed);
-		roll = getPlaneRoll(rotationz, softTilt, Input.GetButton ("Horizontal"), Input.GetAxis("Horizontal"), Time.deltaTime);
-		yaw = getPlaneYaw (Input.GetAxis ("Horizontal"), moveSpeed, maxSpeed, softTilt, Time.deltaTime);//Input.GetAxis("Horizontal") * (Time.deltaTime * turnSpeed);
-		pitch = getPlanePitch (rotationx, Input.GetButton ("Vertical"), Input.GetAxis ("Vertical"), Time.deltaTime);
+		//roll = getPlaneRoll(rotationz, softTilt, Input.GetButton ("Horizontal"), Input.GetAxis("Horizontal"), Time.deltaTime);
+		//yaw = getPlaneYaw (Input.GetAxis ("Horizontal"), moveSpeed, maxSpeed, softTilt, Time.deltaTime);//Input.GetAxis("Horizontal") * (Time.deltaTime * turnSpeed);
+		//pitch = getPlanePitch (rotationx, Input.GetButton ("Vertical"), Input.GetAxis ("Vertical"), Time.deltaTime);
 
-		newRot.eulerAngles = new Vector3(pitch, yaw, roll);
-		rigid.rotation *= newRot;
+		//newRot.eulerAngles = new Vector3(pitch, yaw, roll);
+		//rigid.rotation *= newRot;
 
-		Vector3 newPos = Vector3.forward;
-		newPos = rigid.rotation * newPos;
-		rigid.velocity = newPos * (Time.deltaTime * moveSpeed);
+		//changed input is given to newRot, in order to use flightPhysics
 
+		float[] commands = new float[2];
+		commands[0] = Input.GetAxis("Horizontal");
+		commands[1] = Input.GetAxis("Vertical");
 
+		rigid.rotation *= flightPhysics.getNewState(transform.eulerAngles, commands, Time.deltaTime);
+
+		Vector3 forth = Vector3.forward;
+		forth = rigid.rotation * forth;
+		rigid.velocity = forth * (Time.deltaTime * moveSpeed);
 
 	}
 	/*Camera coroutines*/
@@ -183,75 +192,18 @@ public class planeController : MonoBehaviour {
 		}
 	}
 
-	float getSoftTilt(float rotationz){
-		float rightleftsoft = 0f;
-		if ((Input.GetAxis ("Horizontal")<=0)&&(rotationz >0)&&(rotationz <90)) rightleftsoft = rotationz*2.2f/100*-1;//linksrum || to the left
-		if ((Input.GetAxis ("Horizontal")>=0)&&(rotationz >270)) rightleftsoft= (7.92f-rotationz*2.2f/100);//rechtsrum ||to the right
-
-		if (rightleftsoft>1) rightleftsoft =1;
-		if (rightleftsoft<-1) rightleftsoft =-1;
-		
-		if ((rightleftsoft>-0.01) && (rightleftsoft<0.01)) rightleftsoft=0;
-		
-		return rightleftsoft;
-	}
-
-	float getPlaneRoll(float rotationZ, float softTilt, bool hasHorizontlInput, float horizontalInput, float timeElapsed){
-		float roll = 0f;
-		float turnSpeed = 100f;
-		float returnSpeed = 80f;
-
-		// checks if plane is tilted in the direction opposite that of current horizontal manoeuvre
-		if (hasHorizontlInput) {
-			if ((rotationZ > 1) && (rotationZ < 180) && (horizontalInput > 0))
-				roll -= turnSpeed;
-			if ((rotationZ > 180) && (rotationZ < 359) && (horizontalInput < 0))
-				roll += turnSpeed;
-			else roll += turnSpeed * -(1.0f - Mathf.Abs (softTilt)) * horizontalInput;
-
-		} else {
-			if ((rotationZ > 1) && (rotationZ < 135))
-				roll -= returnSpeed;
-			if ((rotationZ > 225) && (rotationZ < 359))
-				roll += returnSpeed;
+	void OnTriggerEnter(Collider other) 
+	{
+		//print ("Collision occurs");
+		if (other.gameObject.CompareTag("Missile"))
+		{
+			//Explode ();
+			//var exp = GetComponent<ParticleSystem> ();
+			exp = (ParticleSystem)gameObject.AddComponent <ParticleSystem>();
+			exp.Play ();
+			//exp.playOnAwake = false;
+			Destroy(gameObject);
 		}
 
-		return roll * timeElapsed;
-	}
-
-	float getPlanePitch(float rotationX, bool hasVerticalInput, float verticalInput, float timeElapsed){
-		float pitch = 0f;
-		float turnSpeed = 80f;
-		float returnSpeed = 50f;
-
-		if (hasVerticalInput){
-			if (verticalInput <= 0)
-				pitch += verticalInput * 80;
-			else {
-				if (rotationX < 90)
-					pitch += (1.0f - rotationX / 90.0f) * verticalInput * 80;
-				else
-					pitch += verticalInput * 80;
-			}
-		}
-
-		else{
-			if ((rotationX > 1) && (rotationX < 180)) pitch -= returnSpeed;
-			if ((rotationX > 180) && (rotationX <359)) pitch += returnSpeed;
-		}
-		
-		return pitch * timeElapsed;
-	}
-		
-
-	float getPlaneYaw(float horizontalInput, float speed, float maxSpeed, float softTilt, float timeElapsed){
-		float yaw = 0f;
-		float turnSpeed = 80f;
-
-		//float adjustedTurnSpeed = turnSpeed * (1.0f - 0.5f * speed / maxSpeed);
-		float adjustedTurnSpeed = 80;
-		yaw += horizontalInput * adjustedTurnSpeed;
-
-		return yaw * timeElapsed;
 	}
 }

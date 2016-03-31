@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class FlightAI : MonoBehaviour {
+public class FlightAI_med: MonoBehaviour {
 
 	Rigidbody rigid;
 
@@ -16,7 +16,7 @@ public class FlightAI : MonoBehaviour {
 	public float moveSpeed = 500f;
 	float turnSpeed = 75f;
 
-	readonly float maxSpeed = 100000f;
+	readonly float maxSpeed = 200f;
 	readonly float minSpeed = 100f;
 
 	// Use this for initialization
@@ -39,36 +39,15 @@ public class FlightAI : MonoBehaviour {
 		leftCamera.enabled = false;
 		rightCamera.enabled = false;
 
-		/*if (Input.GetKey(KeyCode.Q))
-		{
-			moveSpeed += 5f;
-			if (!accelerating && mainCamera.fieldOfView != 80 && moveSpeed < maxSpeed)
-			{
-				StartCoroutine(cameraFadeOut());
-			}
-		}
-		if (Input.GetKeyUp(KeyCode.Q) || moveSpeed >= maxSpeed)
-			StartCoroutine(cameraStabilize());//mainCamera.fieldOfView = 60f;
-		
-		if (Input.GetKey(KeyCode.Z))
-		{
-			moveSpeed -= 5f;
-			if (!decelerating && mainCamera.fieldOfView != 40 && moveSpeed > minSpeed)
-			{
-				StartCoroutine(cameraFadeIn());
-			}
-		}
-		if (Input.GetKeyUp(KeyCode.Z) || moveSpeed <= minSpeed)
-			StartCoroutine(cameraStabilize());// mainCamera.fieldOfView = 60f;
 
-		*/
 		if (moveSpeed < minSpeed)
 			moveSpeed = minSpeed;
 		else if (moveSpeed > maxSpeed)
 			moveSpeed = maxSpeed;
 
-
 		/*Camera Control*/
+		/*
+
 		if (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.Keypad5))
 		{
 			mainCamera.enabled = false;
@@ -94,7 +73,11 @@ public class FlightAI : MonoBehaviour {
 			rightCamera.enabled = true;
 		}
 
+		if (Input.GetKey(KeyCode.Space))
+		{
 
+		}
+		*/
 	}
 
 	void FixedUpdate()
@@ -109,29 +92,29 @@ public class FlightAI : MonoBehaviour {
 		float targetY = GameObject.Find("MainMockPlane").GetComponent<Transform>().position.y;
 		float targetZ = GameObject.Find("MainMockPlane").GetComponent<Transform>().position.z;
 
-		/*
-		float targetX = 0;
-		float targetY = 0;
-		float targetZ = 0;
-		*/
 		float rotationx = transform.eulerAngles.x;
 		float rotationy = transform.eulerAngles.y;
 		float rotationz = transform.eulerAngles.z;
 
-		//print (transform.forward);
+
+		//get unit vector between opponent and AI
 		var tar = new Vector3 (targetX-transform.position.x, targetY-transform.position.y, targetZ-transform.position.z);
 		tar = tar / (Mathf.Sqrt (((targetZ - transform.position.z) * (targetZ - transform.position.z)) + ((targetY - transform.position.y) * (targetY - transform.position.y)) + ((targetX - transform.position.x) * (targetX - transform.position.x))));
-		//print (tar);
+
+		//get angle between opponent position from AI and AI direction
+		float tarAngle = Vector3.Angle (transform.forward, tar);
+
+		//get opponent position in AI coordinates
+		var worldToPlane = transform.InverseTransformPoint(GameObject.Find("MainMockPlane").GetComponent<Transform>().position);
+
+		float softTilt = getSoftTilt(tar, transform.eulerAngles.z);
 
 
-		float softTilt = getSoftTilt(tar, transform.eulerAngles.z,targetX);
-
-
-
-		roll = getPlaneRoll(tar, targetX, targetY, targetZ, rotationz, softTilt, Time.deltaTime);
-		yaw = getPlaneYaw (tar, targetX, targetY, targetZ, moveSpeed, maxSpeed, rotationy, Time.deltaTime);
-		pitch = getPlanePitch (tar, targetX, targetY, targetZ, rotationx, Time.deltaTime);
-
+		// follow the opponent.
+		roll = getPlaneRoll (tar, rotationz, softTilt, Time.deltaTime, tarAngle, worldToPlane);
+		yaw = getPlaneYaw (tar, Time.deltaTime, tarAngle, worldToPlane);
+		pitch = getPlanePitch (tar, rotationx, Time.deltaTime);
+	
 		//roll = 0;
 		//yaw = 0;
 		//pitch = 0;
@@ -185,7 +168,7 @@ public class FlightAI : MonoBehaviour {
 		}
 	}
 
-	float getSoftTilt(Vector3 tar, float rotationz, float targetX){
+	float getSoftTilt(Vector3 tar, float rotationz){
 		float rightleftsoft = 0f;
 		float horizontalInput = 0f;
 		//get angle between current direction and target direction
@@ -213,16 +196,16 @@ public class FlightAI : MonoBehaviour {
 		return rightleftsoft;
 	}
 
-	float getPlaneRoll(Vector3 tar, float targetX, float targetY, float targetZ, float rotationZ, float softTilt, float timeElapsed){
+	float getPlaneRoll(Vector3 tar, float rotationZ, float softTilt, float timeElapsed, float angle, Vector3 worldToPlane){
 		float roll = 0f;
 		float horizontalInput=0f;
 		float turnSpeed = 100f;
 		float returnSpeed = 80f;
 
 		//get angle between current direction and target direction
-		float angle = Vector3.Angle (transform.forward, tar);
+		//float angle = Vector3.Angle (transform.forward, tar);
 		//get target position in plane coordinates
-		var worldToPlane = transform.InverseTransformPoint(GameObject.Find("MainMockPlane").GetComponent<Transform>().position);
+		//var worldToPlane = transform.InverseTransformPoint(GameObject.Find("MainMockPlane").GetComponent<Transform>().position);
 		/*print (angle);
 		print (worldToPlane);*/
 
@@ -251,22 +234,13 @@ public class FlightAI : MonoBehaviour {
 
 	}
 
-	float getPlanePitch(Vector3 tar, float targetX, float targetY, float targetZ, float rotationX, float timeElapsed){
-		
+	float getPlanePitch(Vector3 tar, float rotationX, float timeElapsed){
+
 		float verticalInput = 0f;
 		float pitch = 0f;
 		float turnSpeed = 80f;
 		float returnSpeed = 50f;
-		/* DEPRECATED
-		float hypX = Mathf.Sqrt (((targetZ - transform.position.z) * (targetZ - transform.position.z)) + ((targetY - transform.position.y) * (targetY - transform.position.y)));
-		//absolute to avoid negative angles (backspin)
-		float adjX = Mathf.Abs (targetZ - transform.position.z);
-		float angleLimit = (Mathf.Acos (adjX / hypX))*180/Mathf.PI;
 
-		//print(angleLimit);
-	
-
-		*/
 		//decides if rotation should be up or down
 		if (tar.y > transform.forward.y + 0.05) {
 			verticalInput = -1.0f;
@@ -277,20 +251,12 @@ public class FlightAI : MonoBehaviour {
 		//sets limit to rotation using the smalles value of angleLimit of 90deg
 		if (verticalInput !=0){
 			if (verticalInput < 0) {
-				//print (rotationX);
-				/*
-				if (rotationX > (360-angleLimit))
-					pitch += ((rotationX - (360-angleLimit)) / angleLimit) * verticalInput * 80;
-				else */if (rotationX > 270)
+				if (rotationX > 270)
 					pitch += ((rotationX - 270) / 90.0f) * verticalInput * 80;
 				else
 					pitch += verticalInput * 80;
 			}else {
-				//print (rotationX);
-				/*
-				if (rotationX < 90 && rotationX < angleLimit)
-					pitch += (1.0f - rotationX / angleLimit) * verticalInput * 80;
-				else */if (rotationX < 90)
+				if (rotationX < 90)
 					pitch += (1.0f - rotationX / 90.0f) * verticalInput * 80;
 				else
 					pitch += verticalInput * 80;
@@ -304,16 +270,16 @@ public class FlightAI : MonoBehaviour {
 		return pitch * timeElapsed;
 	}
 
-	float getPlaneYaw(Vector3 tar, float targetX, float targetY, float targetZ, float speed, float maxSpeed, float rotationY, float timeElapsed){
+	float getPlaneYaw(Vector3 tar, float timeElapsed, float angle, Vector3 worldToPlane){
 		float yaw = 0f;
 		float turnSpeed = 80f;
 		float horizontalInput = 0f;
 		float adjustedTurnSpeed = 80;
 
 		//get angle between current direction and target direction
-		float angle = Vector3.Angle (transform.forward, tar);
+		//float angle = Vector3.Angle (transform.forward, tar);
 		//get target position in plane coordinates
-		var worldToPlane = transform.InverseTransformPoint(GameObject.Find("MainMockPlane").GetComponent<Transform>().position);
+		//var worldToPlane = transform.InverseTransformPoint(GameObject.Find("MainMockPlane").GetComponent<Transform>().position);
 		/*print (angle);
 		print (worldToPlane);*/
 
@@ -328,11 +294,6 @@ public class FlightAI : MonoBehaviour {
 		if (horizontalInput !=0){
 			yaw += horizontalInput * adjustedTurnSpeed;
 		}
-
-		else{/*
-			if ((rotationY > 1) && (rotationY < 180)) pitch -= returnSpeed;
-			if ((rotationY > 180) && (rotationY <359)) pitch += returnSpeed;
-		*/}
 		return yaw * timeElapsed;
 
 	}
